@@ -10,7 +10,7 @@
 
 ## 使用方法
 
-**在线使用**：打开 GitHub Pages 地址（见仓库 About 或右侧 Environments）即可。
+**在线使用**：<https://0xfrostveil.github.io/english-dictation-web/>
 
 **本地使用**：下载 `index.html`，双击用浏览器打开。整个网页只有一个文件，断网也能用。
 
