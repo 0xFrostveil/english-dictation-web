@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大英默写器</title>
+<style>
+  :root{
+    --bg:#f5f6fb; --card:#ffffff; --text:#1b1d26; --muted:#6a7080; --line:#e4e7f0;
+    --accent:#4f46e5; --accent-soft:#eef0ff; --accent-text:#ffffff;
+    --ok:#15803d; --ok-soft:#e9f8ef; --bad:#c2410c; --bad-soft:#fff0e8;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 10px 30px rgba(16,24,40,.06);
+    --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1117; --card:#171a22; --text:#e9ebf3; --muted:#9aa0b0; --line:#2a2f3c;
+      --accent:#8b87ff; --accent-soft:#242449; --accent-text:#111223;
+      --ok:#4ade80; --ok-soft:#12281c; --bad:#fb923c; --bad-soft:#2b1a10;
+      --shadow:none;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:28px 16px 48px}
+  header{margin-bottom:20px}
+  h1{font-size:24px; margin:0 0 4px; letter-spacing:.5px}
+  .sub{color:var(--muted); font-size:13px; margin:0}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px;
+  }
+  .screen[hidden]{display:none!important}
+  .field{margin-bottom:18px}
+  .field:last-child{margin-bottom:0}
+  .label{
+    font-size:13px; font-weight:600; color:var(--muted); letter-spacing:.4px;
+    display:flex; align-items:center; gap:10px; margin-bottom:8px;
+  }
+  .label-actions{margin-left:auto; display:flex; gap:12px}
+  .link{
+    background:none; border:0; padding:0; color:var(--accent); cursor:pointer;
+    font:inherit; font-size:13px;
+  }
+  .link:hover{text-decoration:underline}
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{
+    border:1px solid var(--line); background:transparent; color:var(--text);
+    border-radius:999px; padding:7px 14px; font-size:14px; cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  .chip:hover{border-color:var(--accent)}
+  .chip.active{background:var(--accent); border-color:var(--accent); color:var(--accent-text)}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; flex-wrap:wrap}
+  .seg button{
+    border:0; background:transparent; color:var(--text); padding:8px 14px;
+    font:inherit; font-size:14px; cursor:pointer;
+  }
+  .seg button + button{border-left:1px solid var(--line)}
+  .seg button.active{background:var(--accent-soft); color:var(--accent); font-weight:600}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  @media (max-width:560px){ .grid2{grid-template-columns:1fr} }
+  .options{display:flex; gap:20px; flex-wrap:wrap}
+  .check{display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; user-select:none}
+  .check input{width:17px; height:17px; accent-color:var(--accent); cursor:pointer}
+  .count{color:var(--muted); font-size:13px; margin:2px 0 12px; min-height:18px}
+  .warn{color:var(--bad); font-size:13px}
+  button.primary, button.ghost{
+    font:inherit; font-size:15px; border-radius:10px; cursor:pointer; padding:11px 18px;
+    transition:filter .15s,background .15s,opacity .15s;
+  }
+  button.primary{background:var(--accent); color:var(--accent-text); border:1px solid var(--accent); font-weight:600}
+  button.primary:hover{filter:brightness(1.06)}
+  button.primary:disabled{opacity:.45; cursor:not-allowed; filter:none}
+  button.ghost{background:transparent; color:var(--text); border:1px solid var(--line)}
+  button.ghost:hover{border-color:var(--accent); color:var(--accent)}
+  button.ghost:disabled{opacity:.45; cursor:not-allowed}
+  .big{width:100%; padding:13px 18px; font-size:16px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .row.secondary{margin-top:10px}
+  .row.secondary button{flex:1}
+  footer{margin-top:26px; color:var(--muted); font-size:12px; text-align:center; line-height:1.7}
+  footer a{color:var(--muted)}
+  /* quiz */
+  .topbar{display:flex; align-items:center; gap:14px; margin-bottom:26px}
+  .prog-num{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .bar{flex:1; height:6px; background:var(--line); border-radius:999px; overflow:hidden}
+  .bar i{display:block; height:100%; width:0; background:var(--accent); border-radius:999px; transition:width .25s}
+  .qtype{font-size:13px; color:var(--muted); letter-spacing:.4px; margin-bottom:10px}
+  .question{font-size:clamp(22px,4.6vw,32px); font-weight:600; line-height:1.5; word-break:break-word; min-height:1.5em}
+  .question.small{font-size:clamp(17px,3vw,20px); font-weight:500; line-height:1.75}
+  .question.muted{color:var(--muted); font-weight:500}
+  .example{margin-top:10px; font-size:15px; color:var(--muted); line-height:1.7}
+  .feedback{min-height:48px; margin:18px 0 10px; font-size:15px; line-height:1.6; padding:10px 14px; border-radius:10px}
+  .feedback:empty{padding:0}
+  .feedback.ok{background:var(--ok-soft); color:var(--ok)}
+  .feedback.bad{background:var(--bad-soft); color:var(--bad)}
+  .feedback .ans{font-weight:700; font-size:17px; letter-spacing:.3px}
+  .answer{
+    width:100%; font:inherit; font-size:17px; padding:13px 15px; color:var(--text);
+    background:transparent; border:1.5px solid var(--line); border-radius:12px; outline:none;
+  }
+  .answer:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  .answer:disabled{opacity:.55}
+  .row.actions{margin-top:12px}
+  .row.actions .primary{flex:1}
+  .hintline{margin-top:10px; color:var(--muted); font-size:12px}
+  /* result */
+  .score{font-size:15px; color:var(--muted); margin:0 0 4px}
+  .pct{font-size:44px; font-weight:700; margin:0 0 14px; font-variant-numeric:tabular-nums}
+  .stat-row{display:flex; gap:22px; flex-wrap:wrap; margin-bottom:22px; color:var(--muted); font-size:14px}
+  .stat-row b{color:var(--text); font-size:18px; font-weight:600; margin-left:4px}
+  .wrong-list{list-style:none; margin:0 0 22px; padding:0; max-height:260px; overflow:auto; border-top:1px solid var(--line)}
+  .wrong-list li{display:flex; gap:12px; align-items:baseline; padding:9px 2px; border-bottom:1px solid var(--line); font-size:14px}
+  .wrong-list b{font-size:15px; letter-spacing:.2px}
+  .wrong-list span{color:var(--muted); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .section-title{font-size:13px; font-weight:600; color:var(--muted); letter-spacing:.4px; margin:0 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>大英默写器</h1>
+    <p class="sub">网页版 · 词库内嵌，可离线使用 · 错题保存在本机浏览器</p>
+  </header>
+
+  <section id="screen-setup" class="screen">
+    <div class="card">
+      <div class="field">
+        <div class="label">词书</div>
+        <div class="chips" id="bookChips"></div>
+      </div>
+      <div class="field">
+        <div class="label">单元
+          <span class="label-actions">
+            <button class="link" id="selectAll" type="button">全选</button>
+            <button class="link" id="selectNone" type="button">清空</button>
+          </span>
+        </div>
+        <div class="chips" id="unitChips"></div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <div class="label">内容</div>
+          <div class="seg" id="filterSeg">
+            <button type="button" data-v="all">全部</button>
+            <button type="button" data-v="words">仅单词</button>
+            <button type="button" data-v="phrases">仅短语</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="label">顺序</div>
+          <div class="seg" id="orderSeg">
+            <button type="button" data-v="seq">顺序</button>
+            <button type="button" data-v="random">随机</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="label">模式</div>
+        <div class="seg" id="modeSeg">
+          <button type="button" data-v="word">中文 → 英文</button>
+          <button type="button" data-v="example">例句填空</button>
+          <button type="button" data-v="audio">听写（发音）</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="label">额外提示</div>
+        <div class="options">
+          <label class="check"><input type="checkbox" id="optFirst"> 显示首字母</label>
+          <label class="check"><input type="checkbox" id="optRetry"> 答错后重试</label>
+        </div>
+      </div>
+      <div class="count" id="deckCount"></div>
+      <button class="primary big" id="startBtn" type="button">开始默写</button>
+      <div class="row secondary">
+        <button class="ghost" id="reviewBtn" type="button">复习错题</button>
+        <button class="ghost" id="clearWrongBtn" type="button">清空错题本</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-quiz" class="screen" hidden>
+    <div class="card">
+      <div class="topbar">
+        <span class="prog-num" id="progText">1 / 1</span>
+        <div class="bar"><i id="barFill"></i></div>
+        <button class="link" id="quitBtn" type="button">结束</button>
+      </div>
+      <div class="qtype" id="qType"></div>
+      <div class="question" id="question"></div>
+      <div class="example" id="exampleLine" hidden></div>
+      <div class="feedback" id="feedback"></div>
+      <input class="answer" id="answer" type="text" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false" placeholder="输入英文，回车提交">
+      <div class="row actions">
+        <button class="primary" id="submitBtn" type="button">提交</button>
+        <button class="ghost" id="speakBtn" type="button" hidden>🔊 重听</button>
+        <button class="ghost" id="skipBtn" type="button">跳过</button>
+      </div>
+      <div class="hintline" id="hintline">回车提交 · Esc 结束本轮</div>
+    </div>
+  </section>
+
+  <section id="screen-result" class="screen" hidden>
+    <div class="card">
+      <p class="score" id="resultTitle">本轮完成</p>
+      <p class="pct" id="resultPct">0%</p>
+      <div class="stat-row">
+        <span>正确<b id="statCorrect">0</b></span>
+        <span>错误<b id="statWrong">0</b></span>
+        <span>跳过<b id="statSkipped">0</b></span>
+        <span>总数<b id="statTotal">0</b></span>
+      </div>
+      <p class="section-title" id="wrongListTitle">本轮错题</p>
+      <ul class="wrong-list" id="wrongList"></ul>
+      <button class="primary big" id="againBtn" type="button">再来一轮</button>
+      <div class="row secondary">
+        <button class="ghost" id="reviewBtn2" type="button">复习错题</button>
+        <button class="ghost" id="backBtn" type="button">返回设置</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    词库来自 <a href="https://github.com/Lucent-Snow/ZJU-English-dictation-tool" target="_blank" rel="noreferrer">ZJU-English-dictation-tool</a>（Lucent_Snow）· 网页版为本地单文件，无任何联网请求
+  </footer>
+</div>
+
+<script id="dict-data" type="application/json">/*__DATA__*/</script>
+<script>
+(function(){
+  "use strict";
+
+  var DATA = JSON.parse(document.getElementById('dict-data').textContent);
+  var LS_WRONG = 'dydict.wrong.v1';
+  var LS_PREFS = 'dydict.prefs.v1';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function shuffle(a){
+    for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function cleanEnglish(w){ return w.e.split(',')[0].trim(); }
+  function zhHint(text){
+    var m = String(text||'').match(/[一-龥；，。（）]+/g);
+    if(!m || !m.length) return String(text||'').slice(0,40);
+    return m.join(' / ');
+  }
+  function firstLetter(w){ return (cleanEnglish(w).split(/\s+/)[0] || ' ').charAt(0).toLowerCase(); }
+
+  // ---------- 错题本 ----------
+  function loadWrong(){
+    try{
+      var arr = JSON.parse(localStorage.getItem(LS_WRONG) || '[]');
+      return Array.isArray(arr) ? arr.filter(function(w){ return w && w.e; }) : [];
+    }catch(e){ return []; }
+  }
+  function saveWrong(list){
+    try{ localStorage.setItem(LS_WRONG, JSON.stringify(list)); }catch(e){}
+  }
+  function addWrong(w){
+    var list = loadWrong();
+    var k = w.e.toLowerCase();
+    for(var i=0;i<list.length;i++){ if(list[i].e.toLowerCase() === k) return; }
+    list.push({e:w.e, c:w.c, x:w.x || ''});
+    saveWrong(list);
+  }
+  function wrongCount(){ return loadWrong().length; }
+
+  // ---------- 偏好 ----------
+  function loadPrefs(){
+    try{ return JSON.parse(localStorage.getItem(LS_PREFS) || '{}') || {}; }catch(e){ return {}; }
+  }
+  function savePrefs(){
+    try{
+      localStorage.setItem(LS_PREFS, JSON.stringify({
+        book: state.book, units: Array.from(state.units),
+        filter: state.filter, order: state.order, mode: state.mode,
+        first: state.first, retry: state.retry
+      }));
+    }catch(e){}
+  }
+
+  // ---------- 状态 ----------
+  var state = {
+    book: null, units: new Set(),
+    filter: 'all', order: 'seq', mode: 'word',
+    first: false, retry: false,
+    deck: [], idx: 0, correct: 0, skipped: 0, sessionWrong: [],
+    awaitingNext: false, finished: false, reviewMode: false,
+    timer: 0, lastDeck: null
+  };
+
+  var BOOK_LABELS = { book2: '第二册', book3: '第三册' };
+  function bookLabel(b){ return BOOK_LABELS[b] || b; }
+  function unitLabel(u){ return u.replace(/\.csv$/i,'').replace(/^unit/i,'Unit '); }
+
+  // ---------- 设置界面 ----------
+  var bookChips = $('bookChips'), unitChips = $('unitChips');
+
+  function renderBooks(){
+    bookChips.innerHTML = '';
+    Object.keys(DATA).forEach(function(b){
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'chip' + (b === state.book ? ' active' : '');
+      el.textContent = bookLabel(b);
+      el.title = b;
+      el.onclick = function(){
+        if(state.book === b) return;
+        state.book = b;
+        state.units = new Set(unitNames(b));
+        renderBooks(); renderUnits(); updateCount();
+      };
+      bookChips.appendChild(el);
+    });
+  }
+  function unitNames(b){ return Object.keys(DATA[b].units); }
+
+  function renderUnits(){
+    unitChips.innerHTML = '';
+    unitNames(state.book).forEach(function(u){
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'chip' + (state.units.has(u) ? ' active' : '');
+      el.textContent = unitLabel(u);
+      el.onclick = function(){
+        if(state.units.has(u)) state.units.delete(u); else state.units.add(u);
+        el.classList.toggle('active');
+        updateCount();
+      };
+      unitChips.appendChild(el);
+    });
+    renderCounts();
+  }
+
+  function entriesFor(units){
+    var out = [];
+    units.forEach(function(u){
+      (DATA[state.book].units[u] || []).forEach(function(w){ out.push(w); });
+    });
+    return out;
+  }
+
+  function computeDeck(){
+    var arr = entriesFor(Array.from(state.units));
+    if(state.filter === 'words') arr = arr.filter(function(w){ return w.e.indexOf(' ') === -1; });
+    if(state.filter === 'phrases') arr = arr.filter(function(w){ return w.e.indexOf(' ') !== -1; });
+    if(state.mode === 'example') arr = arr.filter(function(w){ return w.x && w.x.indexOf('[[') !== -1; });
+    var seen = {};
+    arr = arr.filter(function(w){
+      var k = w.e.toLowerCase();
+      if(seen[k]) return false;
+      seen[k] = 1; return true;
+    });
+    return arr;
+  }
+
+  function updateCount(){
+    savePrefs();
+    var n = computeDeck().length;
+    var el = $('deckCount');
+    if(!state.units.size){
+      el.textContent = '';
+      el.innerHTML = '<span class="warn">请至少选择一个单元</span>';
+    }else if(!n){
+      el.innerHTML = '<span class="warn">当前组合没有可用词条（例句模式需要含 [[ ]] 的例句）</span>';
+    }else{
+      el.textContent = '共 ' + n + ' 个词条 · ' + state.units.size + ' 个单元';
+    }
+    $('startBtn').disabled = !n;
+    renderCounts();
+  }
+
+  function renderCounts(){
+    var n = wrongCount();
+    $('reviewBtn').textContent = '复习错题' + (n ? ' (' + n + ')' : '');
+    $('reviewBtn').disabled = !n;
+    $('reviewBtn2').textContent = '复习错题' + (n ? ' (' + n + ')' : '');
+    $('reviewBtn2').disabled = !n;
+    $('clearWrongBtn').disabled = !n;
+  }
+
+  function bindSeg(id, key){
+    var seg = $(id);
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), function(btn){
+      btn.onclick = function(){
+        Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        state[key] = btn.dataset.v;
+        savePrefs();
+        updateCount();
+        if(key === 'mode') updateCount();
+      };
+    });
+  }
+
+  // ---------- 游戏 ----------
+  function showScreen(name){
+    $('screen-setup').hidden = name !== 'setup';
+    $('screen-quiz').hidden = name !== 'quiz';
+    $('screen-result').hidden = name !== 'result';
+    window.scrollTo(0, 0);
+  }
+
+  function startSession(deck, opts){
+    clearTimeout(state.timer);
+    state.deck = deck;
+    state.idx = 0;
+    state.correct = 0;
+    state.skipped = 0;
+    state.sessionWrong = [];
+    state.awaitingNext = false;
+    state.finished = false;
+    state.reviewMode = !!opts.review;
+    state.lastDeck = { deck: deck.slice(), review: !!opts.review };
+    showScreen('quiz');
+    renderQuestion();
+  }
+
+  function startFromSettings(){
+    var deck = computeDeck();
+    if(!deck.length) return;
+    if(state.order === 'random') shuffle(deck);
+    state.reviewMode = false;
+    startSession(deck, {});
+  }
+
+  function startReview(){
+    var list = loadWrong();
+    if(!list.length) return;
+    saveWrong([]);              // 复习开始时清空，答错会重新记入
+    renderCounts();
+    state.mode = 'word';        // 与原工具一致：错题复习固定中文→英文
+    syncSeg();
+    var deck = shuffle(list.slice());
+    startSession(deck, { review: true });
+  }
+
+  function syncSeg(){
+    var map = { filterSeg: state.filter, orderSeg: state.order, modeSeg: state.mode };
+    Object.keys(map).forEach(function(id){
+      Array.prototype.forEach.call($(id).querySelectorAll('button'), function(b){
+        b.classList.toggle('active', b.dataset.v === map[id]);
+      });
+    });
+    $('optFirst').checked = state.first;
+    $('optRetry').checked = state.retry;
+  }
+
+  function renderQuestion(){
+    var w = state.deck[state.idx];
+    if(!w){ finish(); return; }
+    var total = state.deck.length;
+
+    $('progText').textContent = (state.idx + 1) + ' / ' + total;
+    $('barFill').style.width = (state.idx / total * 100) + '%';
+
+    var q = $('question'), ex = $('exampleLine');
+    q.classList.remove('small', 'muted');
+    ex.hidden = true;
+    ex.textContent = '';
+
+    var fb = $('feedback');
+    fb.className = 'feedback';
+    fb.innerHTML = '';
+
+    var input = $('answer');
+    input.disabled = false;
+    input.value = '';
+    $('submitBtn').disabled = false;
+    $('submitBtn').textContent = '提交';
+    $('skipBtn').disabled = false;
+    state.awaitingNext = false;
+
+    var speakBtn = $('speakBtn');
+    speakBtn.hidden = state.mode !== 'audio';
+    $('hintline').textContent = state.mode === 'audio'
+      ? '回车提交 · Esc 结束 · 没声音请检查系统英文语音'
+      : '回车提交 · Esc 结束';
+
+    if(state.mode === 'word'){
+      $('qType').textContent = state.reviewMode ? '错题复习 · 看中文，写英文' : '看中文，写英文';
+      q.textContent = zhHint(w.c);
+      if(state.first) $('qType').textContent += ' · 首字母 ' + firstLetter(w);
+    }else if(state.mode === 'example'){
+      var sent = buildExample(w);
+      $('qType').textContent = '例句填空 · 只填原形' + (state.first ? ' · 首字母 ' + firstLetter(w) : '');
+      if(sent){
+        q.classList.add('small');
+        q.textContent = sent;
+      }else{
+        q.classList.add('muted');
+        q.textContent = '（该词没有可用例句，已自动跳过）';
+      }
+    }else{
+      $('qType').textContent = '听发音，写单词' + (state.first ? ' · 首字母 ' + firstLetter(w) : '');
+      q.classList.add('muted');
+      q.textContent = '🔊 点击「重听」或直接拼写';
+      setTimeout(function(){ speak(w.e); }, 200);
+    }
+
+    input.focus({preventScroll:true});
+  }
+
+  function buildExample(w){
+    var raw = w.x || '';
+    var parts = raw.split('；');
+    if(parts.length > 1) raw = parts[Math.floor(Math.random() * parts.length)];
+    if(raw.indexOf('[[') === -1) return null;
+    var pre = state.first ? firstLetter(w) : '';
+    return raw.replace(/\[\[.*?\]\]/g, pre + '________（' + zhHint(w.c) + '）');
+  }
+
+  function currentWord(){ return state.deck[state.idx]; }
+
+  function submitAnswer(){
+    if(state.awaitingNext){ advance(); return; }
+    var w = currentWord();
+    if(!w) return;
+    var input = $('answer');
+    if(input.disabled) return;
+    var val = input.value.trim();
+    if(!val) return;
+
+    var correct = val.toLowerCase() === cleanEnglish(w).toLowerCase();
+    var fb = $('feedback');
+
+    if(correct){
+      state.correct++;
+      fb.className = 'feedback ok';
+      fb.innerHTML = '✅ 正确 · <span class="ans">' + esc(cleanEnglish(w)) + '</span>';
+      input.disabled = true;
+      $('submitBtn').disabled = true;
+      $('skipBtn').disabled = true;
+      clearTimeout(state.timer);
+      state.timer = setTimeout(advance, 500);
+    }else{
+      addWrong(w);
+      if(!state.sessionWrong.some(function(x){ return x.e.toLowerCase() === w.e.toLowerCase(); })){
+        state.sessionWrong.push(w);
+      }
+      renderCounts();
+      fb.className = 'feedback bad';
+      fb.innerHTML = '❌ 你输入了「' + esc(val) + '」 · 正确答案：<span class="ans">' + esc(cleanEnglish(w)) + '</span>';
+
+      if(state.retry){
+        fb.innerHTML += '<div>请再试一次</div>';
+        input.disabled = true;
+        state.timer = setTimeout(function(){
+          input.disabled = false;
+          input.value = '';
+          input.focus({preventScroll:true});
+        }, 1000);
+      }else{
+        state.awaitingNext = true;
+        input.disabled = true;
+        $('submitBtn').disabled = false;
+        $('submitBtn').textContent = '下一题（回车）';
+        $('skipBtn').disabled = true;
+      }
+    }
+  }
+
+  function advance(){
+    if(state.finished) return;
+    clearTimeout(state.timer);
+    state.idx++;
+    if(state.idx >= state.deck.length){ finish(); return; }
+    renderQuestion();
+  }
+
+  function skipWord(){
+    if(state.awaitingNext){ advance(); return; }
+    if(!currentWord()) return;
+    state.skipped++;           // 跳过不计入错题（与原工具默认快捷键 a /skip 一致）
+    advance();
+  }
+
+  function finish(){
+    state.finished = true;
+    clearTimeout(state.timer);
+    var total = state.deck.length;
+    var pct = total ? Math.round(state.correct / total * 100) : 0;
+
+    $('resultPct').textContent = pct + '%';
+    $('statCorrect').textContent = state.correct;
+    $('statWrong').textContent = state.sessionWrong.length;
+    $('statSkipped').textContent = state.skipped;
+    $('statTotal').textContent = total;
+    $('resultTitle').textContent = state.reviewMode ? '错题复习完成' : '本轮完成';
+
+    var ul = $('wrongList');
+    ul.innerHTML = '';
+    if(!state.sessionWrong.length){
+      $('wrongListTitle').textContent = '本轮没有错题 🎉';
+    }else{
+      $('wrongListTitle').textContent = '本轮错题（' + state.sessionWrong.length + '）';
+      state.sessionWrong.forEach(function(w){
+        var li = document.createElement('li');
+        li.innerHTML = '<b>' + esc(cleanEnglish(w)) + '</b><span>' + esc(zhHint(w.c)) + '</span>';
+        ul.appendChild(li);
+      });
+    }
+    renderCounts();
+    showScreen('result');
+  }
+
+  function quitSession(){
+    if(!state.finished && state.deck.length && !confirm('结束本轮？已完成的进度不会保存。')) return;
+    state.finished = true;
+    clearTimeout(state.timer);
+    showScreen('setup');
+    renderCounts();
+  }
+
+  // ---------- 发音 ----------
+  var voice = null;
+  function pickVoice(){
+    if(!('speechSynthesis' in window)) return;
+    var vs = window.speechSynthesis.getVoices() || [];
+    voice = vs.filter(function(v){ return /^en[-_]/i.test(v.lang); })
+              .sort(function(a, b){
+                var score = function(v){
+                  var s = 0;
+                  if(/US/i.test(v.lang)) s += 2;
+                  if(/natural|google|aria|jenny|zira/i.test(v.name)) s += 1;
+                  return s;
+                };
+                return score(b) - score(a);
+              })[0] || null;
+  }
+  if('speechSynthesis' in window){
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function speak(text){
+    if(!('speechSynthesis' in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(cleanEnglish({e:text}));
+      u.lang = 'en-US';
+      u.rate = 0.85;
+      if(voice) u.voice = voice;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  // ---------- 绑定 ----------
+  var input = $('answer');
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); submitAnswer(); }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && state.awaitingNext){ e.preventDefault(); advance(); }
+    if(e.key === 'Escape' && !$('screen-quiz').hidden){ quitSession(); }
+  });
+  $('submitBtn').onclick = submitAnswer;
+  $('skipBtn').onclick = skipWord;
+  $('speakBtn').onclick = function(){ var w = currentWord(); if(w) speak(w.e); };
+  $('quitBtn').onclick = quitSession;
+
+  $('startBtn').onclick = startFromSettings;
+  $('reviewBtn').onclick = startReview;
+  $('reviewBtn2').onclick = startReview;
+  $('clearWrongBtn').onclick = function(){
+    if(!wrongCount()) return;
+    if(confirm('清空所有错题？此操作不可撤销。')){ saveWrong([]); renderCounts(); }
+  };
+  $('selectAll').onclick = function(){
+    state.units = new Set(unitNames(state.book));
+    renderUnits(); updateCount();
+  };
+  $('selectNone').onclick = function(){
+    state.units = new Set();
+    renderUnits(); updateCount();
+  };
+  $('optFirst').onchange = function(){ state.first = this.checked; savePrefs(); };
+  $('optRetry').onchange = function(){ state.retry = this.checked; savePrefs(); };
+  $('againBtn').onclick = function(){
+    if(state.reviewMode){
+      if(wrongCount()) startReview();
+      else showScreen('setup');
+      return;
+    }
+    var d = state.lastDeck ? state.lastDeck.deck.slice() : [];
+    if(!d.length) return;
+    if(state.order === 'random') shuffle(d);
+    startSession(d, {});
+  };
+  $('backBtn').onclick = function(){ showScreen('setup'); renderCounts(); };
+
+  bindSeg('filterSeg', 'filter');
+  bindSeg('orderSeg', 'order');
+  bindSeg('modeSeg', 'mode');
+
+  // ---------- 初始化 ----------
+  (function init(){
+    var prefs = loadPrefs();
+    var books = Object.keys(DATA);
+    state.book = prefs.book && DATA[prefs.book] ? prefs.book : books[0];
+    var units = unitNames(state.book);
+    if(Array.isArray(prefs.units) && prefs.units.length){
+      state.units = new Set(prefs.units.filter(function(u){ return units.indexOf(u) !== -1; }));
+      if(!state.units.size) state.units = new Set(units);
+    }else{
+      state.units = new Set(units);
+    }
+    if(['all','words','phrases'].indexOf(prefs.filter) !== -1) state.filter = prefs.filter;
+    if(['seq','random'].indexOf(prefs.order) !== -1) state.order = prefs.order;
+    if(['word','example','audio'].indexOf(prefs.mode) !== -1) state.mode = prefs.mode;
+    state.first = !!prefs.first;
+    state.retry = !!prefs.retry;
+
+    renderBooks();
+    renderUnits();
+    syncSeg();
+    updateCount();
+    renderCounts();
+  })();
+})();
+</script>
+</body>
+</html>
